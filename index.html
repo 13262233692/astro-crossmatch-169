@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>虚拟天文台星表交叉证认工具</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header id="app-header">
+            <div class="header-title">
+                <h1>🔭 虚拟天文台星表交叉证认工具</h1>
+                <span class="subtitle">Virtual Observatory Cross-Match Tool</span>
+            </div>
+            <div class="header-info">
+                <span id="stats-info">就绪</span>
+            </div>
+        </header>
+
+        <div id="main-content">
+            <aside id="control-panel">
+                <section class="panel-section">
+                    <h3>📋 星表加载</h3>
+                    <div class="control-group">
+                        <label>Gaia 星表数量</label>
+                        <input type="range" id="gaia-count" min="500" max="5000" value="2000" step="100">
+                        <span id="gaia-count-val">2000</span>
+                    </div>
+                    <div class="control-group">
+                        <label>2MASS 星表数量</label>
+                        <input type="range" id="twomass-count" min="500" max="5000" value="2000" step="100">
+                        <span id="twomass-count-val">2000</span>
+                    </div>
+                    <div class="control-group">
+                        <label>天区中心 RA (°)</label>
+                        <input type="number" id="center-ra" value="180" min="0" max="360" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label>天区中心 Dec (°)</label>
+                        <input type="number" id="center-dec" value="30" min="-90" max="90" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label>天区半径 (°)</label>
+                        <input type="number" id="field-radius" value="5" min="1" max="30" step="0.5">
+                    </div>
+                    <button id="btn-load" class="btn btn-primary">加载星表</button>
+                </section>
+
+                <section class="panel-section">
+                    <h3>🔗 交叉证认</h3>
+                    <div class="control-group">
+                        <label>HEALPix Nside</label>
+                        <select id="healpix-nside">
+                            <option value="32">32</option>
+                            <option value="64" selected>64</option>
+                            <option value="128">128</option>
+                            <option value="256">256</option>
+                            <option value="512">512</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>匹配半径 (arcsec)</label>
+                        <input type="number" id="match-radius" value="1.0" min="0.1" max="10" step="0.1">
+                    </div>
+                    <div class="control-group checkbox-group pm-toggle-group">
+                        <label>
+                            <input type="checkbox" id="apply-pm" checked>
+                            自行修正 (PM Correction)
+                        </label>
+                        <span id="pm-hint" class="pm-hint pm-on">✅ 已启用</span>
+                    </div>
+                    <div class="epoch-info">
+                        Gaia 历元: J2016.0 → 2MASS 历元: J2000.0<br>
+                        <small>16年间高自行星位移可达数角秒</small>
+                    </div>
+                    <button id="btn-match" class="btn btn-accent" disabled>执行交叉证认</button>
+                </section>
+
+                <section class="panel-section">
+                    <h3>� 星团检测</h3>
+                    <div class="control-group">
+                        <label>DBSCAN ε (arcmin)</label>
+                        <input type="number" id="cluster-epsilon" value="2.0" min="0.5" max="10" step="0.5">
+                    </div>
+                    <div class="control-group">
+                        <label>最小成员数</label>
+                        <input type="number" id="cluster-minpts" value="8" min="3" max="50" step="1">
+                    </div>
+                    <button id="btn-cluster" class="btn btn-purple" disabled>识别星团</button>
+                    <div id="cluster-list" class="cluster-list">
+                        <span class="cluster-hint">加载星表后可检测星团</span>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h3>�🎨 显示选项</h3>
+                    <div class="control-group checkbox-group">
+                        <label><input type="checkbox" id="show-gaia" checked> Gaia 源</label>
+                    </div>
+                    <div class="control-group checkbox-group">
+                        <label><input type="checkbox" id="show-twomass" checked> 2MASS 源</label>
+                    </div>
+                    <div class="control-group checkbox-group">
+                        <label><input type="checkbox" id="show-matched" checked> 匹配源</label>
+                    </div>
+                    <div class="control-group checkbox-group">
+                        <label><input type="checkbox" id="show-cluster" checked> 按星团着色</label>
+                    </div>
+                    <div class="control-group">
+                        <label>点大小</label>
+                        <input type="range" id="point-size" min="1" max="8" value="3" step="0.5">
+                    </div>
+                    <div class="control-group">
+                        <label>背景色</label>
+                        <input type="color" id="bg-color" value="#0a0a1a">
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h3>📊 统计信息</h3>
+                    <div id="stats-panel">
+                        <div class="stat-item"><span class="stat-label">Gaia 源:</span><span id="stat-gaia">-</span></div>
+                        <div class="stat-item"><span class="stat-label">2MASS 源:</span><span id="stat-twomass">-</span></div>
+                        <div class="stat-item"><span class="stat-label">匹配对:</span><span id="stat-matched">-</span></div>
+                        <div class="stat-item"><span class="stat-label">匹配率:</span><span id="stat-rate">-</span></div>
+                        <div class="stat-item"><span class="stat-label">匹配耗时:</span><span id="stat-time">-</span></div>
+                        <div class="stat-item stat-pm"><span class="stat-label">自行修正:</span><span id="stat-pm">-</span></div>
+                        <div class="stat-item stat-pm"><span class="stat-label">高自行恢复:</span><span id="stat-highpm">-</span></div>
+                    </div>
+                </section>
+            </aside>
+
+            <main id="viewport-container">
+                <div id="three-viewport"></div>
+                <div id="viewport-overlay">
+                    <span id="hover-info"></span>
+                </div>
+            </main>
+
+            <aside id="detail-panel">
+                <section class="panel-section">
+                    <h3>⭐ 选中星体详情</h3>
+                    <div id="star-detail">
+                        <p class="hint">点击3D视图中的星体查看详情</p>
+                    </div>
+                </section>
+                <section class="panel-section">
+                    <h3>📈 多波段星等图</h3>
+                    <canvas id="mag-canvas" width="300" height="250"></canvas>
+                </section>
+                <section class="panel-section">
+                    <h3>🌊 SED 光谱能量分布</h3>
+                    <canvas id="sed-canvas" width="300" height="200"></canvas>
+                </section>
+                <section class="panel-section">
+                    <h3>✨ 赫罗图 (HR)</h3>
+                    <canvas id="hr-canvas" width="300" height="280"></canvas>
+                    <div class="hr-hint">点击HR图中的点可选中对应星体</div>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
